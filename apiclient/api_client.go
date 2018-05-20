@@ -1,13 +1,12 @@
 package apiclient
 
 import (
-	"github.com/xosmig/sdchat2/proto"
+	"github.com/xosmig/sdchat/proto"
 )
 
 type ApiClient interface {
 	Start() error
 	Stop()
-	SendMessage(*sdchat2.Message) error
-	ReceiveMessage() (*sdchat2.Message, error)
+	SendMessage(*proto.Message) error
+	ReceiveMessage() (*proto.Message, error)
 }
-

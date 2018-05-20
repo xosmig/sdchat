@@ -3,7 +3,7 @@ syntax = "proto3";
 option java_package = "com.spbau.sdchat";
 option java_outer_classname = "SdchatProto";
 
-package sdchat2;
+package proto;
 
 message Message {
     string name = 1;

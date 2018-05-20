@@ -1,3 +1,3 @@
 #!/bin/sh -eu
 
-go build -o sdchat.out ./main
+go build -o sdchat.out ./cmd

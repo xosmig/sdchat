@@ -1,14 +1,14 @@
 package apiclient
 
 import (
-	"github.com/xosmig/sdchat2/proto"
+	"github.com/xosmig/sdchat/proto"
 	"net"
 	"fmt"
 	"google.golang.org/grpc"
 	"time"
 )
 
-type serverStream sdchat2.Node_RouteChatServer
+type serverStream proto.Node_RouteChatServer
 
 type GrpcChatServer struct {
 	grpcServer *grpc.Server
@@ -25,11 +25,11 @@ func (client *GrpcChatServer) Stop() {
 	client.grpcServer.Stop()
 }
 
-func (client *GrpcChatServer) SendMessage(message *sdchat2.Message) error {
+func (client *GrpcChatServer) SendMessage(message *proto.Message) error {
 	return client.stream.Send(message)
 }
 
-func (client *GrpcChatServer) ReceiveMessage() (*sdchat2.Message, error) {
+func (client *GrpcChatServer) ReceiveMessage() (*proto.Message, error) {
 	return client.stream.Recv()
 }
 
@@ -41,7 +41,7 @@ func NewGrpcChatServer(port uint16) (*GrpcChatServer, error) {
 
 	grpcServer := grpc.NewServer()
 	nodeServer := &nodeServer{streams: make(chan serverStream)}
-	sdchat2.RegisterNodeServer(grpcServer, nodeServer)
+	proto.RegisterNodeServer(grpcServer, nodeServer)
 	go grpcServer.Serve(lis)
 
 	return &GrpcChatServer{grpcServer: grpcServer, stream: nil, server: nodeServer}, nil
@@ -52,7 +52,7 @@ type nodeServer struct {
 	done    bool
 }
 
-func (server *nodeServer) RouteChat(stream sdchat2.Node_RouteChatServer) error {
+func (server *nodeServer) RouteChat(stream proto.Node_RouteChatServer) error {
 	if server.done {
 		return fmt.Errorf("only one connection is supported")
 	}

@@ -3,27 +3,28 @@ package sdchat
 import (
 	"bufio"
 	"fmt"
-	"github.com/xosmig/sdchat2/proto"
 	"time"
-	"github.com/xosmig/sdchat2/apiclient"
+	"github.com/xosmig/sdchat/apiclient"
 	"os"
 	"log"
-	"math/rand"
 	"io"
+	"github.com/xosmig/sdchat/proto"
+	"context"
 )
 
 type ChatNode struct {
 	reader    *bufio.Reader
 	name      string
 	apiClient apiclient.ApiClient
+	stdout    io.Writer
 }
 
 func NewChatNode(name string, apiClient apiclient.ApiClient) ChatNode {
-	return ChatNode{bufio.NewReader(os.Stdin), name, apiClient}
+	return ChatNode{bufio.NewReader(os.Stdin), name, apiClient, os.Stdout}
 }
 
 func (node *ChatNode) sendMessage(text string) {
-	message := &sdchat2.Message{
+	message := &proto.Message{
 		Name:      node.name,
 		Timestamp: time.Now().Unix(),
 		Text:      text,
@@ -37,26 +38,20 @@ func (node *ChatNode) sendMessage(text string) {
 }
 
 func (node *ChatNode) printf(format string, a ...interface{}) {
-	fmt.Printf(format, a...)
+	fmt.Fprintf(node.stdout, format, a...)
 }
 
 func (node *ChatNode) println(str string) {
 	node.printf("%s\n", str)
 }
 
-func (node *ChatNode) printMessage(message *sdchat2.Message) {
+func (node *ChatNode) printMessage(message *proto.Message) {
 	timeStr := time.Unix(message.Timestamp, 0).Format("02.01.2006 15:04")
 	node.printf("\n[%s] %s: %s\n", timeStr, message.Name, message.Text)
 }
 
 func (node *ChatNode) printError(errorMsg string) {
 	node.printf("\nError: %s\n", errorMsg)
-}
-
-func (node *ChatNode) sayBye() {
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	bye := []string{"Tschüss!", "Bye!", "Пока!", "バイ!"}
-	node.println(bye[rnd.Intn(len(bye))])
 }
 
 func discardLine(reader *bufio.Reader) error {
@@ -72,21 +67,28 @@ func discardLine(reader *bufio.Reader) error {
 }
 
 func (node *ChatNode) Run() error {
+	return node.RunWithContext(context.Background())
+}
+
+func (node *ChatNode) RunWithContext(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	helperCtx, helperCancel := context.WithCancel(context.Background())
+	defer helperCancel()
+
 	log.Println("Connecting...")
 	err := node.apiClient.Start()
 	if err != nil {
 		node.printError(fmt.Sprintf("Connection error: %v", err))
 		return err
 	}
-	defer func() { node.apiClient.Stop() }()
+	defer node.apiClient.Stop()
 	log.Println("Connected.")
 	log.Println("Type \"m[enter]\" to write a message or \"q[enter]\" to exit")
 
-	finish := make(chan bool, 1)
-	defer func() { close(finish) }()
-
 	lines := make(chan string)
 	go func() {
+		defer close(lines)
 		for {
 			bytes, isPrefix, err := node.reader.ReadLine()
 			if isPrefix {
@@ -94,44 +96,62 @@ func (node *ChatNode) Run() error {
 				err = discardLine(node.reader)
 			}
 			if err == io.EOF {
-				finish <- true
-				break
+				cancel()
+				<-helperCtx.Done() // wait for main goroutine to complete before closing the channel
+				return
 			}
 			if err != nil {
 				node.printError(fmt.Sprintf("Oops: error reading your input: %v", err))
 				continue
 			}
-			lines <- string(bytes)
+			select {
+			case lines <- string(bytes):
+			case <-helperCtx.Done():
+				return
+			}
 		}
 	}()
 
-	messages := make(chan *sdchat2.Message)
-	defer func() { close(messages) }()
+	messages := make(chan *proto.Message)
 	go func() {
+		defer close(messages)
 		for {
 			message, err := node.apiClient.ReceiveMessage()
 			if err != nil {
 				node.println("Connection is closed")
-				finish <- true
-				break
+				cancel()
+				<-helperCtx.Done() // wait for main goroutine to complete before closing the channel
+				return
 			}
-			messages <- message
+			select {
+			case messages <- message:
+			case <-helperCtx.Done():
+				return
+			}
 		}
 	}()
 
 selectLoop:
 	for {
+		log.Println("Debug: waiting for an event...")
 		select {
-		case <-finish:
+		case <-ctx.Done():
+			log.Println("Debug: exiting")
 			break selectLoop
 		case line := <-lines:
 			switch line {
 			case "m":
+				log.Println("Debug: reading message from the user...")
 				node.printf("Enter message: ")
-				text := <-lines  // blocking
-				node.sendMessage(text)
+				select {
+				case <-ctx.Done():
+				case text := <-lines:
+					log.Println("Debug: sending message...")
+					node.sendMessage(text)
+				}
 			case "q":
-				finish <- true
+				log.Println("Debug: exit requested")
+				cancel()
 			default:
 				node.printError(fmt.Sprintf("Unknown command: '%s'", line))
 			}
@@ -140,6 +160,5 @@ selectLoop:
 		}
 	}
 
-	node.sayBye()
 	return nil
 }

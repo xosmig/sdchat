@@ -4,14 +4,14 @@ import (
 	"net"
 	"google.golang.org/grpc"
 	"fmt"
-	"github.com/xosmig/sdchat2/proto"
+	"github.com/xosmig/sdchat/proto"
 	"context"
 )
 
-type clientStream sdchat2.Node_RouteChatClient
+type clientStream proto.Node_RouteChatClient
 
 type GrpcChatClient struct {
-	grpcClient sdchat2.NodeClient
+	grpcClient proto.NodeClient
 	conn       *grpc.ClientConn
 	stream     clientStream
 }
@@ -22,7 +22,7 @@ func NewGrpcChatClient(addr *net.IPAddr, port uint16) (*GrpcChatClient, error) {
 		return nil, err
 	}
 
-	return &GrpcChatClient{conn: conn, grpcClient: sdchat2.NewNodeClient(conn)}, nil
+	return &GrpcChatClient{conn: conn, grpcClient: proto.NewNodeClient(conn)}, nil
 }
 
 func (client *GrpcChatClient) Start() error {
@@ -40,10 +40,10 @@ func (client *GrpcChatClient) Stop() {
 	client.conn.Close()
 }
 
-func (client *GrpcChatClient) SendMessage(message *sdchat2.Message) error {
+func (client *GrpcChatClient) SendMessage(message *proto.Message) error {
 	return client.stream.Send(message)
 }
 
-func (client *GrpcChatClient) ReceiveMessage() (*sdchat2.Message, error) {
+func (client *GrpcChatClient) ReceiveMessage() (*proto.Message, error) {
 	return client.stream.Recv()
 }
