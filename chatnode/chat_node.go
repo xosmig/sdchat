@@ -73,8 +73,6 @@ func (node *ChatNode) Run() error {
 func (node *ChatNode) RunWithContext(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	helperCtx, helperCancel := context.WithCancel(context.Background())
-	defer helperCancel()
 
 	log.Println("Connecting...")
 	err := node.apiClient.Start()
@@ -97,7 +95,6 @@ func (node *ChatNode) RunWithContext(ctx context.Context) error {
 			}
 			if err == io.EOF {
 				cancel()
-				<-helperCtx.Done() // wait for main goroutine to complete before closing the channel
 				return
 			}
 			if err != nil {
@@ -106,7 +103,7 @@ func (node *ChatNode) RunWithContext(ctx context.Context) error {
 			}
 			select {
 			case lines <- string(bytes):
-			case <-helperCtx.Done():
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -114,18 +111,16 @@ func (node *ChatNode) RunWithContext(ctx context.Context) error {
 
 	messages := make(chan *proto.Message)
 	go func() {
-		defer close(messages)
 		for {
 			message, err := node.apiClient.ReceiveMessage()
 			if err != nil {
 				node.println("Connection is closed")
 				cancel()
-				<-helperCtx.Done() // wait for main goroutine to complete before closing the channel
 				return
 			}
 			select {
 			case messages <- message:
-			case <-helperCtx.Done():
+			case <-ctx.Done():
 				return
 			}
 		}
