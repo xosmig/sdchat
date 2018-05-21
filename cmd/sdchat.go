@@ -6,7 +6,6 @@ import (
 	"net"
 	"fmt"
 	"github.com/xosmig/sdchat/chatnode"
-	"context"
 	"time"
 	"math/rand"
 )

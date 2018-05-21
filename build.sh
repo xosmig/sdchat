@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/bin/sh -eux
 
 dep ensure
-go build -o sdchat.out ./cmd
+go build -o=sdchat.out "$@" ./cmd
