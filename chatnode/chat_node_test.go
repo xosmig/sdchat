@@ -3,7 +3,6 @@ package sdchat
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"github.com/bouk/monkey"
 	"github.com/golang/mock/gomock"
@@ -91,19 +90,18 @@ func TestChatNode(t *testing.T) {
 			chatNode.reader = bufio.NewReader(inputReader)
 
 			done := make(chan bool)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			go func() {
-				chatNode.RunWithContext(ctx)
+				chatNode.Run()
 				done <- true
 			}()
 
 			for _, msg := range tc.msgs {
-				if msg.text == WAIT {
+				switch msg.text {
+				case WAIT:
 					time.Sleep(1 * time.Second)
-				} else if msg.text == EXIT {
+				case EXIT:
 					fmt.Fprintln(inputWriter, "q")
-				} else {
+				default:
 					fmt.Fprintln(inputWriter, "m")
 					fmt.Fprintln(inputWriter, msg.text)
 				}
