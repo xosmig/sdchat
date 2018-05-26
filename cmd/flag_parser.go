@@ -1,11 +1,11 @@
 package main
 
 import (
-	"io"
 	"flag"
+	"fmt"
+	"io"
 	"math"
 	"os"
-	"fmt"
 )
 
 type Params struct {
@@ -16,8 +16,8 @@ type Params struct {
 
 func PrintUsage(stderr io.Writer) {
 	fmt.Fprintln(stderr, "Usage: sdchat [-serverip IP] -port PORT NAME")
-	fmt.Fprintln(stderr, "If -serverip parameter is provided, the chat will run " +
-		"in client mode, which means that it will connect to the server running on IP:PORT. " +
+	fmt.Fprintln(stderr, "If -serverip parameter is provided, the chat will run "+
+		"in client mode, which means that it will connect to the server running on IP:PORT. "+
 		"Otherwise, it will start a new chat server listening on port PORT.")
 }
 

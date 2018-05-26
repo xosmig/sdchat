@@ -1,20 +1,20 @@
 package sdchat
 
 import (
-	"testing"
-	"github.com/golang/mock/gomock"
-	"github.com/xosmig/sdchat/apiclient/mock_apiclient"
 	"bufio"
-	"time"
-	"io"
-	"fmt"
-	"github.com/xosmig/sdchat/proto"
 	"bytes"
 	"context"
-	"log"
-	"io/ioutil"
-	"os"
+	"fmt"
 	"github.com/bouk/monkey"
+	"github.com/golang/mock/gomock"
+	"github.com/xosmig/sdchat/apiclient/mock_apiclient"
+	"github.com/xosmig/sdchat/proto"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"testing"
+	"time"
 )
 
 func TestChatNode(t *testing.T) {

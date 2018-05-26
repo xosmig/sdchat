@@ -1,11 +1,11 @@
 package apiclient
 
 import (
-	"net"
-	"google.golang.org/grpc"
+	"context"
 	"fmt"
 	"github.com/xosmig/sdchat/proto"
-	"context"
+	"google.golang.org/grpc"
+	"net"
 )
 
 type clientStream proto.Node_RouteChatClient

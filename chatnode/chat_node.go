@@ -2,14 +2,14 @@ package sdchat
 
 import (
 	"bufio"
-	"fmt"
-	"time"
-	"github.com/xosmig/sdchat/apiclient"
-	"os"
-	"log"
-	"io"
-	"github.com/xosmig/sdchat/proto"
 	"context"
+	"fmt"
+	"github.com/xosmig/sdchat/apiclient"
+	"github.com/xosmig/sdchat/proto"
+	"io"
+	"log"
+	"os"
+	"time"
 )
 
 type ChatNode struct {

@@ -1,10 +1,10 @@
 package apiclient
 
 import (
-	"github.com/xosmig/sdchat/proto"
-	"net"
 	"fmt"
+	"github.com/xosmig/sdchat/proto"
 	"google.golang.org/grpc"
+	"net"
 	"time"
 )
 

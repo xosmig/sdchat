@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
-	"github.com/xosmig/sdchat/apiclient"
-	"net"
 	"fmt"
+	"github.com/xosmig/sdchat/apiclient"
 	"github.com/xosmig/sdchat/chatnode"
-	"time"
 	"math/rand"
+	"net"
+	"os"
+	"time"
 )
 
 func runChatNode(conf Params) error {
