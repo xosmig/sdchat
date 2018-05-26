@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 )
 
 type Params struct {
@@ -40,8 +39,6 @@ func ParseCommandLine(args []string, stderr io.Writer) (Params, error) {
 	}
 	if commandLine.NArg() < 1 {
 		return Params{}, fmt.Errorf("parameter NAME is required")
-		commandLine.Usage()
-		os.Exit(3)
 	}
 
 	if *portFlag > math.MaxUint16 {
