@@ -43,6 +43,7 @@ func runChatNode(conf Params) error {
 func main() {
 	params, err := ParseCommandLine(os.Args[1:], os.Stderr)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		PrintUsage(os.Stderr)
 		os.Exit(2)
 	}
