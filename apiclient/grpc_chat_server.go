@@ -10,30 +10,15 @@ import (
 
 type serverStream proto.Node_RouteChatServer
 
-type GrpcChatServer struct {
+type grpcChatServer struct {
 	grpcServer *grpc.Server
 	stream     serverStream
 	server     *nodeServer
 }
 
-func (client *GrpcChatServer) Start() error {
-	client.stream = <-client.server.streams
-	return nil
-}
-
-func (client *GrpcChatServer) Stop() {
-	client.grpcServer.Stop()
-}
-
-func (client *GrpcChatServer) SendMessage(message *proto.Message) error {
-	return client.stream.Send(message)
-}
-
-func (client *GrpcChatServer) ReceiveMessage() (*proto.Message, error) {
-	return client.stream.Recv()
-}
-
-func NewGrpcChatServer(port uint16) (*GrpcChatServer, error) {
+// NewGrpcChatServer creates an instance of ApiClient
+// which is used to do all the api calls from the server side.
+func NewGrpcChatServer(port uint16) (ApiClient, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
@@ -44,9 +29,28 @@ func NewGrpcChatServer(port uint16) (*GrpcChatServer, error) {
 	proto.RegisterNodeServer(grpcServer, nodeServer)
 	go grpcServer.Serve(lis)
 
-	return &GrpcChatServer{grpcServer: grpcServer, stream: nil, server: nodeServer}, nil
+	return &grpcChatServer{grpcServer: grpcServer, stream: nil, server: nodeServer}, nil
 }
 
+func (client *grpcChatServer) Start() error {
+	client.stream = <-client.server.streams
+	return nil
+}
+
+func (client *grpcChatServer) Stop() {
+	client.grpcServer.Stop()
+}
+
+func (client *grpcChatServer) SendMessage(message *proto.Message) error {
+	return client.stream.Send(message)
+}
+
+func (client *grpcChatServer) ReceiveMessage() (*proto.Message, error) {
+	return client.stream.Recv()
+}
+
+// nodeServer implements proto.NodeServer.
+// It accepts only one connection and simply saves the message stream for others' use.
 type nodeServer struct {
 	streams chan serverStream
 	done    bool

@@ -10,22 +10,24 @@ import (
 
 type clientStream proto.Node_RouteChatClient
 
-type GrpcChatClient struct {
+type grpcChatClient struct {
 	grpcClient proto.NodeClient
 	conn       *grpc.ClientConn
 	stream     clientStream
 }
 
-func NewGrpcChatClient(addr *net.IPAddr, port uint16) (*GrpcChatClient, error) {
+// NewGrpcChatClient creates an instance of ApiClient
+// which is used to do all the api calls from the client side.
+func NewGrpcChatClient(addr *net.IPAddr, port uint16) (ApiClient, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", addr, port), grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 
-	return &GrpcChatClient{conn: conn, grpcClient: proto.NewNodeClient(conn)}, nil
+	return &grpcChatClient{conn: conn, grpcClient: proto.NewNodeClient(conn)}, nil
 }
 
-func (client *GrpcChatClient) Start() error {
+func (client *grpcChatClient) Start() error {
 	stream, err := client.grpcClient.RouteChat(context.Background())
 	if err != nil {
 		return err
@@ -34,16 +36,16 @@ func (client *GrpcChatClient) Start() error {
 	return nil
 }
 
-func (client *GrpcChatClient) Stop() {
+func (client *grpcChatClient) Stop() {
 	// errors are ignored
 	client.stream.CloseSend()
 	client.conn.Close()
 }
 
-func (client *GrpcChatClient) SendMessage(message *proto.Message) error {
+func (client *grpcChatClient) SendMessage(message *proto.Message) error {
 	return client.stream.Send(message)
 }
 
-func (client *GrpcChatClient) ReceiveMessage() (*proto.Message, error) {
+func (client *grpcChatClient) ReceiveMessage() (*proto.Message, error) {
 	return client.stream.Recv()
 }
