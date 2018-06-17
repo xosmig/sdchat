@@ -3,5 +3,20 @@
 
 # sdchat
 
-Software design home assignment.
-Simple grpc chat.
+Software design home assignment. Simple grpc one-on-one chat.
+
+## Building and running
+
+* install go: https://golang.org
+
+* install dep: https://github.com/golang/dep
+
+* run `./build.sh`
+
+* run `./sdchat.out`
+
+## Working with sources
+
+* You can run `./test.sh` to run unit tests
+
+* You can run `./generate.sh` to regenerate the generated sources (such as mock objects)
