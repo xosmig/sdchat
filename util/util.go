@@ -14,4 +14,3 @@ func DiscardLineFromReader(reader *bufio.Reader) error {
 		}
 	}
 }
-

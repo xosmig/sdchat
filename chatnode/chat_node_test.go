@@ -12,9 +12,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
-	"strings"
 )
 
 // special text for mock messages

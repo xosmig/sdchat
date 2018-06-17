@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"github.com/xosmig/sdchat/apiclient"
 	"github.com/xosmig/sdchat/proto"
+	"github.com/xosmig/sdchat/util"
 	"io"
 	"log"
 	"os"
 	"time"
-	"github.com/xosmig/sdchat/util"
 )
 
 // ChatNode provides simple text user interface for sdchat.
