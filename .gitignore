@@ -1,0 +1,5 @@
+.idea
+*.iml
+main/sdchat
+sdchat.out
+vendor

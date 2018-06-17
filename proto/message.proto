@@ -1,0 +1,16 @@
+
+syntax = "proto3";
+option java_package = "com.spbau.sdchat";
+option java_outer_classname = "SdchatProto";
+
+package proto;
+
+message Message {
+    string name = 1;
+    string text = 2;
+    int64 timestamp = 3;
+}
+
+service Node {
+    rpc RouteChat(stream Message) returns (stream Message) {}
+}
