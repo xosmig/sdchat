@@ -10,8 +10,10 @@ import (
 	"log"
 	"os"
 	"time"
+	"github.com/xosmig/sdchat/util"
 )
 
+// ChatNode provides simple text user interface for sdchat.
 type ChatNode struct {
 	reader     *bufio.Reader
 	clientName string
@@ -19,10 +21,12 @@ type ChatNode struct {
 	stdout     io.Writer
 }
 
-func NewChatNode(clientName string, apiClient apiclient.ApiClient) ChatNode {
-	return ChatNode{bufio.NewReader(os.Stdin), clientName, apiClient, os.Stdout}
+// NewChatNode creates a chat node with the given username and ApiClient
+func NewChatNode(username string, apiClient apiclient.ApiClient) ChatNode {
+	return ChatNode{bufio.NewReader(os.Stdin), username, apiClient, os.Stdout}
 }
 
+// sendMessage constructs and sends a message with the given text.
 func (node *ChatNode) sendMessage(text string) {
 	message := &proto.Message{
 		Name:      node.clientName,
@@ -37,39 +41,35 @@ func (node *ChatNode) sendMessage(text string) {
 	node.printMessage(message)
 }
 
+// printf prints the text to the node's output channel
 func (node *ChatNode) printf(format string, a ...interface{}) {
 	fmt.Fprintf(node.stdout, format, a...)
 }
 
-func (node *ChatNode) println(str string) {
-	node.printf("%s\n", str)
+// printf prints the line to the node's output channel
+func (node *ChatNode) println(line string) {
+	node.printf("%s\n", line)
 }
 
+// printMessage prints the given message to the node's output channel
 func (node *ChatNode) printMessage(message *proto.Message) {
 	timeStr := time.Unix(message.Timestamp, 0).Format("02.01.2006 15:04")
 	node.printf("\n[%s] %s: %s\n", timeStr, message.Name, message.Text)
 }
 
+// printError prints the given error message to the node's output channel
 func (node *ChatNode) printError(errorMsg string) {
 	node.printf("\nError: %s\n", errorMsg)
 }
 
-func discardLine(reader *bufio.Reader) error {
-	for {
-		_, isPrefix, err := reader.ReadLine()
-		if err != nil {
-			return err
-		}
-		if !isPrefix {
-			return nil
-		}
-	}
-}
-
+// Run starts the chat node.
+// It blocks until one of the clients decides to close the connection, or an error happens.
+// Use RunWithContext if you want to be able to interrupt the execution.
 func (node *ChatNode) Run() error {
 	return node.RunWithContext(context.Background())
 }
 
+// RunWithContext is the same as Run, but can be interrupted by cancelling the context.
 func (node *ChatNode) RunWithContext(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -91,7 +91,7 @@ func (node *ChatNode) RunWithContext(ctx context.Context) error {
 			bytes, isPrefix, err := node.reader.ReadLine()
 			if isPrefix {
 				node.printError("Line is too long")
-				err = discardLine(node.reader)
+				err = util.DiscardLineFromReader(node.reader)
 			}
 			if err == io.EOF {
 				cancel()
