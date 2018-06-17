@@ -13,7 +13,11 @@ Software design home assignment. Simple grpc one-on-one chat.
 
 * run `./build.sh`
 
-* run `./sdchat.out`
+* run `./sdchat.out -port 8080 usernameServer` in one terminal
+
+* run `./sdchat.out -serverip localhost -port 8080 usernameClient` in another terminal
+
+* you can also run `./sdchat -help` for more detailed usage instructions
 
 ## Working with sources
 
