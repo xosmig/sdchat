@@ -3,13 +3,13 @@
 
 package proto
 
-import "github.com/golang/protobuf/proto"
-import "fmt"
-import "math"
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
 
 import (
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
