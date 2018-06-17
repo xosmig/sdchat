@@ -14,7 +14,57 @@ import (
 	"os"
 	"testing"
 	"time"
+	"strings"
 )
+
+// special text for mock messages
+const EXIT = ":EXIT:"
+
+const SLEEP = ":SLEEP:"
+const SYNC = ":SYNC:"
+const WAIT = ":WAIT:"
+
+func doSynchronization(msgText *string, syncChan chan struct{}) {
+	for {
+		if strings.HasPrefix(*msgText, SLEEP) {
+			time.Sleep(1 * time.Second)
+			*msgText = (*msgText)[len(SLEEP):]
+			continue
+		}
+
+		if strings.HasPrefix(*msgText, WAIT) {
+			<-syncChan
+			// this sleep is necessary
+			time.Sleep(300 * time.Millisecond)
+			*msgText = (*msgText)[len(WAIT):]
+			continue
+		}
+
+		if strings.HasSuffix(*msgText, SYNC) {
+			syncChan <- struct{}{}
+			*msgText = (*msgText)[:len(*msgText)-len(SYNC)]
+			continue
+		}
+
+		break
+	}
+}
+
+func mockExpectReply(mock *mock_apiclient.MockApiClient, replyMsg string, syncChan chan struct{}) {
+	mock.EXPECT().ReceiveMessage().Times(1).DoAndReturn(func() (*proto.Message, error) {
+		doSynchronization(&replyMsg, syncChan)
+
+		if replyMsg == EXIT {
+			return nil, fmt.Errorf("canceled connection")
+		}
+
+		return &proto.Message{
+			Name:      "Mock",
+			Text:      replyMsg,
+			Timestamp: time.Now().Unix(),
+		}, nil
+	})
+}
 
 func TestChatNode(t *testing.T) {
 	// stub time.Now with a deterministic value
@@ -23,27 +73,27 @@ func TestChatNode(t *testing.T) {
 	})
 	defer patch.Unpatch()
 
-	type message struct {
-		text string
-		sync bool
-	}
-	EXIT := ":EXIT:"
-	WAIT := ":WAIT:"
 	testCases := []struct {
 		name    string
-		msgs    []message
-		replies []message
+		msgs    []string
+		replies []string
 	}{
-		{"empty", []message{{EXIT, false}}, []message{{WAIT, false}}},
+		{"empty",
+			[]string{EXIT},
+			[]string{WAIT + EXIT},
+		},
 		{"simpleGreeting",
-			[]message{{"hi!", true}, {EXIT, false}},
-			[]message{{"hallo", true}, {WAIT, false}}},
+			[]string{"hi!" + SYNC, WAIT + EXIT + SYNC},
+			[]string{WAIT + "hallo" + SYNC, WAIT + EXIT},
+		},
 		{"twoMessagesInARow",
-			[]message{{"Hi! How are you?", true}, {"Magnificent!", false}, {"Bye!", true}, {EXIT, false}},
-			[]message{{"Hi, great!", true}, {"c u", true}, {WAIT, false}}},
+			[]string{"Hi! How are you?" + SYNC, WAIT + "Magnificent!", "Bye!" + SYNC, WAIT + EXIT + SYNC},
+			[]string{WAIT + "Hi, great!" + SYNC, WAIT + "c u" + SYNC, WAIT + EXIT},
+		},
 		{"twoRepliesInARow",
-			[]message{{"Hi! How are you?", true}, {WAIT, false}},
-			[]message{{"Hi", true}, {"Don't wanna talk", false}, {EXIT, false}}},
+			[]string{"Hi! How are you?" + SYNC, WAIT + EXIT},
+			[]string{WAIT + "Hi", "Don't wanna talk", SLEEP + EXIT + SYNC},
+		},
 	}
 
 	log.SetOutput(ioutil.Discard)
@@ -53,64 +103,47 @@ func TestChatNode(t *testing.T) {
 			ctrl := gomock.NewController(tt)
 			defer ctrl.Finish()
 
-			wantReply := make(chan bool)
+			syncChan := make(chan struct{})
 
+			// set the mock expectations
 			mockApiClient := mock_apiclient.NewMockApiClient(ctrl)
 			mockApiClient.EXPECT().Start().Times(1).Return(nil)
-			for _, replyIter := range tc.replies {
-				reply := replyIter
-				mockApiClient.EXPECT().ReceiveMessage().Times(1).DoAndReturn(func() (*proto.Message, error) {
-					if reply.sync {
-						<-wantReply
-						time.Sleep(100 * time.Millisecond)
-					}
-					if reply.text == EXIT {
-						return nil, fmt.Errorf("canceled connection")
-					}
-					if reply.text == WAIT {
-						time.Sleep(1 * time.Second)
-					}
-					message := &proto.Message{
-						Name:      "Mock",
-						Text:      reply.text,
-						Timestamp: time.Now().Unix(),
-					}
-					return message, nil
-				})
+			for _, reply := range tc.replies {
+				mockExpectReply(mockApiClient, reply, syncChan)
 			}
 			mockApiClient.EXPECT().SendMessage(gomock.Any()).Times(len(tc.msgs) - 1).Return(nil)
 			mockApiClient.EXPECT().Stop().Times(1)
 
+			// create a chat node
 			chatNode := NewChatNode("test", mockApiClient)
 
+			// innit IO utility
 			output := new(bytes.Buffer)
 			chatNode.stdout = output
-
 			inputReader, inputWriter := io.Pipe()
 			chatNode.reader = bufio.NewReader(inputReader)
 
+			// start the chat node
 			done := make(chan bool)
 			go func() {
 				chatNode.Run()
 				done <- true
 			}()
 
+			// emulate client's part
 			for _, msg := range tc.msgs {
-				switch msg.text {
-				case WAIT:
-					time.Sleep(1 * time.Second)
-				case EXIT:
+				doSynchronization(&msg, syncChan)
+
+				if msg == EXIT {
 					fmt.Fprintln(inputWriter, "q")
-				default:
-					fmt.Fprintln(inputWriter, "m")
-					fmt.Fprintln(inputWriter, msg.text)
+					break
 				}
-				if msg.sync {
-					wantReply <- true
-					time.Sleep(200 * time.Millisecond)
-				}
+
+				fmt.Fprintln(inputWriter, "m")
+				fmt.Fprintln(inputWriter, msg)
 			}
 
+			// wait for chat node completion with 1-second timeout
 			select {
 			case <-done:
 				// OK, continue
@@ -118,6 +151,7 @@ func TestChatNode(t *testing.T) {
 				tt.Fatalf("Timeout")
 			}
 
+			// compare the result with the golden image
 			answerFile := fmt.Sprintf("./tests_output/TestChatNode/%s", tc.name)
 			if os.Getenv("SDCHAT_UPDATE_TEST_ANSWER") != "" {
 				err := ioutil.WriteFile(answerFile, output.Bytes(), 0666)

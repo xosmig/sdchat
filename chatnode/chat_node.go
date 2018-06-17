@@ -13,19 +13,19 @@ import (
 )
 
 type ChatNode struct {
-	reader    *bufio.Reader
-	name      string
-	apiClient apiclient.ApiClient
-	stdout    io.Writer
+	reader     *bufio.Reader
+	clientName string
+	apiClient  apiclient.ApiClient
+	stdout     io.Writer
 }
 
-func NewChatNode(name string, apiClient apiclient.ApiClient) ChatNode {
-	return ChatNode{bufio.NewReader(os.Stdin), name, apiClient, os.Stdout}
+func NewChatNode(clientName string, apiClient apiclient.ApiClient) ChatNode {
+	return ChatNode{bufio.NewReader(os.Stdin), clientName, apiClient, os.Stdout}
 }
 
 func (node *ChatNode) sendMessage(text string) {
 	message := &proto.Message{
-		Name:      node.name,
+		Name:      node.clientName,
 		Timestamp: time.Now().Unix(),
 		Text:      text,
 	}
